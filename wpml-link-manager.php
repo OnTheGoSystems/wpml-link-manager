@@ -8,7 +8,7 @@
 Class WPML_Link_Manager {
 
 
-	const PACKAGE_TYPE = 'Link Manager';
+	private $package_type = 'Link Manager';
 
 
 	public function __construct() {
@@ -17,26 +17,35 @@ Class WPML_Link_Manager {
 		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) )
 			return false;
 
-		register_activation_hook( __FILE__, array( __CLASS__, 'plugin_activation' ) );
+		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
 
-		add_action( 'init', array( $this, 'init' ) );
-		add_action( 'wpml_register_string_packages', array( $this, 'add_missing_strings_packages' ) );
+		$this->hooks();
 	}
 
 
 	/**
-	 * Intitialization
+	 * Hook the methods
 	 */
-	public function init() {
+	public function hooks() {
 
 		// Attach hooks
-		add_action( 'add_link', array( $this, 'add_strings_package' ) );
-		add_action( 'add_link', array( $this, 'synchronize_link_categories' ) );
-		add_action( 'edit_link', array( $this, 'add_strings_package' ) );
-		add_action( 'edit_link', array( $this, 'synchronize_link_categories' ) );
-		add_filter( 'get_bookmarks', array( $this, 'filter_links' ) );
-		add_action( 'deleted_link', array( $this, 'delete_strings_package' ) );
-		add_action( 'add_meta_boxes', array( $this, 'add_package_translation_metabox' ) );
+		add_action( 'add_link',                      array( $this, 'add_or_edit_link_action' ) );
+		add_action( 'edit_link',                     array( $this, 'add_or_edit_link_action' ) );
+		add_filter( 'get_bookmarks',                 array( $this, 'get_bookmarks_filter' ) );
+		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ) );
+		add_action( 'add_meta_boxes',                array( $this, 'add_meta_boxes_action' ) );
+		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action' ) );
+	}
+
+
+	/**
+	 * "add_link" or "edit_link" action
+	 *
+	 * @ int $link_id
+	 */
+	public function add_or_edit_link_action( $link_id ) {
+		$this->add_strings_package( $link_id );
+		$this->synchronize_link_categories( $link_id );
 	}
 
 
@@ -46,7 +55,7 @@ Class WPML_Link_Manager {
 	 *
 	 * @param int $link_id
 	 */
-	public function add_strings_package( $link_id ) {
+	private function add_strings_package( $link_id ) {
 
 		$link = get_bookmark( $link_id );
 
@@ -67,7 +76,7 @@ Class WPML_Link_Manager {
 	 *
 	 * @return array of $link objects
 	 */
-	public function filter_links( $links ) {
+	public function get_bookmarks_filter( $links ) {
 
 		if ( is_admin() )
 			return $links;
@@ -87,11 +96,21 @@ Class WPML_Link_Manager {
 
 
 	/**
+	 * "deleted_link" action
+	 *
+	 * @param int $link_id
+	 */
+	public function deleted_link_action( $link_id ) {
+		$this->delete_strings_package( $link_id );
+	}
+
+
+	/**
 	 * Remove the string package when the link is deleted
 	 *
 	 * @param int $link_id
 	 */
-	public function delete_strings_package( $link_id ) {
+	private function delete_strings_package( $link_id ) {
 		do_action( 'wpml_delete_package_action', $link_id, 'Link Manager' );
 	}
 
@@ -99,7 +118,7 @@ Class WPML_Link_Manager {
 	/**
 	 * Add a metabox to the link edit form
 	 */
-	public function add_package_translation_metabox() {
+	public function add_meta_boxes_action() {
 		add_meta_box( 'link-translation', __( 'Link translation', 'wpml-link-manager' ), array( $this, 'render_package_language_ui' ), 'link', 'side', 'default' );
 	}
 
@@ -121,7 +140,7 @@ Class WPML_Link_Manager {
 	 *
 	 * @param mixed int|object $link
 	 *
-	 * @return array
+	 * @return array $package
 	 */
 	private function get_package( $link ) {
 
@@ -132,7 +151,7 @@ Class WPML_Link_Manager {
 		 */
 		if ( is_object( $link ) ) {
 			$package = array(
-				'kind' 		=> self::PACKAGE_TYPE,
+				'kind' 		=> $this->package_type,
 				'name' 		=> $link->link_id,
 				'title' 	=> $link->link_name,
 				'edit_link' => admin_url( 'link.php?action=edit&link_id=' . $link->link_id ),
@@ -140,7 +159,7 @@ Class WPML_Link_Manager {
 			);
 		} else {
 			$package = array(
-				'kind' 		=> self::PACKAGE_TYPE,
+				'kind' 		=> $this->package_type,
 				'name' 		=> $link,
 			);
 		}
@@ -165,7 +184,7 @@ Class WPML_Link_Manager {
 	/**
 	 * Perform some action when plugin is activated
 	 */
-	public static function plugin_activation() {
+	public function plugin_activation() {
 		// Force package refresh
 		update_option( 'wpml-package-translation-refresh-required', true );
 	}
@@ -178,9 +197,9 @@ Class WPML_Link_Manager {
 	 * @param string $type => empty string...
 	 * @param array $existing => NULL... have to verify the hook
 	 */
-	public function add_missing_strings_packages( $type, $existing ) {
+	public function wpml_register_string_packages_action( $type, $existing ) {
 
-		if ( !empty( $type ) && $type != self::PACKAGE_TYPE )
+		if ( !empty( $type ) && $type != $this->package_type )
 			return false;
 
 		$links = get_bookmarks();
@@ -215,8 +234,10 @@ Class WPML_Link_Manager {
 	 * => It's more like a term duplication because they will
 	 * all point to the same object, but it should be enough
 	 * for links
+	 *
+	 * @param int $link_id
 	 */
-	public function synchronize_link_categories( $link_id ) {
+	private function synchronize_link_categories( $link_id ) {
 
 		$cats = $new_cats = wp_get_link_cats( $link_id );
 		$langs = apply_filters( 'wpml_active_languages', array() );
