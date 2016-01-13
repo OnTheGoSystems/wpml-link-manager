@@ -20,6 +20,15 @@ Class WPML_Link_Manager {
 		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
 
 		$this->hooks();
+
+		if ( isset( $_GET['link_id'] ) ) {
+			
+			$link_id = filter_input( INPUT_GET, 'link_id' );
+			$link = get_bookmark( $link_id );
+			$package = $this->get_package( $link );
+			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
+			do_action( 'wpml_show_package_language_admin_bar', $package );
+		}
 	}
 
 
@@ -35,6 +44,29 @@ Class WPML_Link_Manager {
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ) );
 		add_action( 'add_meta_boxes',                array( $this, 'add_meta_boxes_action' ) );
 		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action' ) );
+		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
+	}
+
+
+	/**
+	 * "plugins_loaded" action
+	 */
+	public function plugins_loaded_action() {
+		add_action( 'load-link.php', array( $this, 'load_link_action' ) );
+	}
+
+
+	/**
+	 * Action fired when link.php is loaded
+	 * Add the specific package language switcher
+	 */
+	public function load_link_action() {
+		if ( isset( $_GET['action'] ) && $_GET['action'] == 'edit' && isset( $_GET['link_id'] ) ) {
+			$link_id = filter_input( INPUT_GET, 'link_id' );
+			$package = $this->get_package( $link_id );
+
+			do_action( 'wpml_show_package_language_admin_bar', $package );
+		}
 	}
 
 
