@@ -1,5 +1,5 @@
 <wpml-config>
 	<taxonomies>
-		<taxonomy translate="1">link_category</taxonomy>
+		<taxonomy translate="0">link_category</taxonomy>
 	</taxonomies>
 </wpml-config>

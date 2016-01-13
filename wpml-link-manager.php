@@ -20,15 +20,6 @@ Class WPML_Link_Manager {
 		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
 
 		$this->hooks();
-
-		if ( isset( $_GET['link_id'] ) ) {
-			
-			$link_id = filter_input( INPUT_GET, 'link_id' );
-			$link = get_bookmark( $link_id );
-			$package = $this->get_package( $link );
-			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
-			do_action( 'wpml_show_package_language_admin_bar', $package );
-		}
 	}
 
 
@@ -36,15 +27,18 @@ Class WPML_Link_Manager {
 	 * Hook the methods
 	 */
 	public function hooks() {
-
-		// Attach hooks
 		add_action( 'add_link',                      array( $this, 'add_or_edit_link_action' ) );
 		add_action( 'edit_link',                     array( $this, 'add_or_edit_link_action' ) );
 		add_filter( 'get_bookmarks',                 array( $this, 'get_bookmarks_filter' ) );
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ) );
 		add_action( 'add_meta_boxes',                array( $this, 'add_meta_boxes_action' ) );
-		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action' ) );
+		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action', 10, 2 ) );
 		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
+		add_filter( 'get_terms',                     array( $this, 'get_terms_filter' ), 10, 3 );
+		add_action( 'created_link_category',         array( $this, 'created_or_edited_link_category_action' ), 10, 2 );
+		add_action( 'edited_link_category',          array( $this, 'created_or_edited_link_category_action' ), 10, 2 );
+		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ), 10, 4 );
+		add_action( 'delete_term',                   array( $this, 'delete_term_action' ), 10, 4 );
 	}
 
 
@@ -52,7 +46,8 @@ Class WPML_Link_Manager {
 	 * "plugins_loaded" action
 	 */
 	public function plugins_loaded_action() {
-		add_action( 'load-link.php', array( $this, 'load_link_action' ) );
+		add_action( 'load-link.php',      array( $this, 'load_link_action' ) );
+		add_action( 'load-edit-tags.php', array( $this, 'load_edit_tags_action' ) );
 	}
 
 
@@ -65,7 +60,25 @@ Class WPML_Link_Manager {
 			$link_id = filter_input( INPUT_GET, 'link_id' );
 			$package = $this->get_package( $link_id );
 
+			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
 			do_action( 'wpml_show_package_language_admin_bar', $package );
+		}
+	}
+
+
+	/**
+	 * Action fired when edit-tags.php is loaded
+	 * Add the specific language switcher
+	 */
+	public function load_edit_tags_action() {
+		if ( isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] == 'link_category' ) {
+			add_filter( 'wpml_show_admin_language_switcher', '__return_false' ); // TODO: Too late because it is fired in "plugins_loaded" with priority 1. Needs to be fired later!!!
+
+			if ( isset( $_GET['tag_ID'] ) ) {
+				$tag_id = filter_input( INPUT_GET, 'tag_ID' );
+				$package = $this->get_package( $tag_id, 'category' );
+				do_action( 'wpml_show_package_language_admin_bar', $package );
+			}
 		}
 	}
 
@@ -77,7 +90,6 @@ Class WPML_Link_Manager {
 	 */
 	public function add_or_edit_link_action( $link_id ) {
 		$this->add_strings_package( $link_id );
-		$this->synchronize_link_categories( $link_id );
 	}
 
 
@@ -92,8 +104,8 @@ Class WPML_Link_Manager {
 		$link = get_bookmark( $link_id );
 
 		$package = $this->get_package( $link );
-		$name_string_name = $this->get_string_name( 'name', $link );
-		$description_string_name = $this->get_string_name( 'description', $link );
+		$name_string_name = $this->get_link_string_name( 'name', $link );
+		$description_string_name = $this->get_link_string_name( 'description', $link );
 
 		do_action( 'wpml_register_string', $link->link_name, $name_string_name, $package, 'Link title', 'LINE');
 		do_action( 'wpml_register_string', $link->link_description, $description_string_name, $package, 'Link description', 'AREA');
@@ -116,8 +128,8 @@ Class WPML_Link_Manager {
 		foreach ( $links as $link ) {
 
 			$package = $this->get_package( $link );
-			$name_string_name = $this->get_string_name( 'name', $link );
-			$description_string_name = $this->get_string_name( 'description', $link );
+			$name_string_name = $this->get_link_string_name( 'name', $link );
+			$description_string_name = $this->get_link_string_name( 'description', $link );
 
 			$link->link_name = apply_filters( 'wpml_translate_string', $link->link_name, $name_string_name, $package );
 			$link->link_description = apply_filters( 'wpml_translate_string', $link->link_description, $description_string_name, $package );
@@ -133,7 +145,7 @@ Class WPML_Link_Manager {
 	 * @param int $link_id
 	 */
 	public function deleted_link_action( $link_id ) {
-		$this->delete_strings_package( $link_id );
+		$this->delete_strings_package( $link_id, 'link' );
 	}
 
 
@@ -142,8 +154,8 @@ Class WPML_Link_Manager {
 	 *
 	 * @param int $link_id
 	 */
-	private function delete_strings_package( $link_id ) {
-		do_action( 'wpml_delete_package_action', $link_id, 'Link Manager' );
+	private function delete_strings_package( $link_id, $subtype ) {
+		do_action( 'wpml_delete_package_action', $link_id, $this->package_type . ' - ' . $subtype );
 	}
 
 
@@ -170,29 +182,39 @@ Class WPML_Link_Manager {
 	/**
 	 * Returns a string package
 	 *
-	 * @param mixed int|object $link
+	 * @param mixed int|object $link or $category
+	 * @param string $subtype
 	 *
 	 * @return array $package
 	 */
-	private function get_package( $link ) {
+	private function get_package( $link_or_cat, $subtype = 'link' ) {
+
+		$package_subtype = $this->package_type . ' - ' . $subtype;
 
 		/**
 		 * More data if object
 		 * This is important when we are registering
 		 * the package in the database
 		 */
-		if ( is_object( $link ) ) {
+		if ( is_object( $link_or_cat ) && 'link' === $subtype ) {
 			$package = array(
-				'kind' 		=> $this->package_type,
-				'name' 		=> $link->link_id,
-				'title' 	=> $link->link_name,
-				'edit_link' => admin_url( 'link.php?action=edit&link_id=' . $link->link_id ),
-				'view_link' => $link->link_url,
+				'kind'      => $package_subtype,
+				'name'      => $link_or_cat->link_id,
+				'title'     => $link_or_cat->link_name,
+				'edit_link' => admin_url( 'link.php?action=edit&link_id=' . $link_or_cat->link_id ),
+				'view_link' => $link_or_cat->link_url,
+			);
+		} elseif ( is_object( $link_or_cat ) && 'category' === $subtype ) {
+			$package = array(
+				'kind'      => $package_subtype,
+				'name'      => $link_or_cat->term_id,
+				'title'     => $link_or_cat->name,
+				'edit_link' => admin_url( 'edit-tags.php?action=edit&taxonomy=link_category&tag_ID=' . $link_or_cat->term_id ),
 			);
 		} else {
 			$package = array(
-				'kind' 		=> $this->package_type,
-				'name' 		=> $link,
+				'kind' 		=> $package_subtype,
+				'name' 		=> $link_or_cat,
 			);
 		}
 
@@ -201,15 +223,28 @@ Class WPML_Link_Manager {
 
 
 	/**
-	 * Format the string name including the link ID
+	 * Format the link string name including the link ID
 	 *
 	 * @param string $name
 	 * @param object $link
 	 *
 	 * @return string formatted
 	 */
-	private function get_string_name( $name, $link ) {
+	private function get_link_string_name( $name, $link ) {
 		return 'link-' . $link->link_id . '-' . $name;
+	}
+
+
+	/**
+	 * Format the category string name including the term ID
+	 *
+	 * @param string $name
+	 * @param object $category
+	 *
+	 * @return string formatted
+	 */
+	private function get_category_string_name( $name, $category ) {
+		return 'link-category-' . $category->term_id . '-' . $name;
 	}
 
 
@@ -229,7 +264,7 @@ Class WPML_Link_Manager {
 	 * @param string $type => empty string...
 	 * @param array $existing => NULL... have to verify the hook
 	 */
-	public function wpml_register_string_packages_action( $type, $existing ) {
+	public function wpml_register_string_packages_action( $type = null, $existing = null ) {
 
 		if ( !empty( $type ) && $type != $this->package_type )
 			return false;
@@ -261,36 +296,74 @@ Class WPML_Link_Manager {
 
 
 	/**
-	 * Synchronize link categories on save
-	 * Assign the translated terms to the same link object
-	 * => It's more like a term duplication because they will
-	 * all point to the same object, but it should be enough
-	 * for links
+	 * Hook in get_terms to translate the category name and description
 	 *
-	 * @param int $link_id
+	 * @param array $categories
+	 * @param array $taxonomies
+	 * @param array $args
+	 *
+	 * @return string $cat_name Category name
 	 */
-	private function synchronize_link_categories( $link_id ) {
+	public function get_terms_filter( $categories, $taxonomies, $args ) {
 
-		$cats = $new_cats = wp_get_link_cats( $link_id );
-		$langs = apply_filters( 'wpml_active_languages', array() );
-
-		foreach ( $langs as $lang ) {
-
-			foreach ( $cats as $cat ) {
-
-				$new_cats[] = apply_filters( 'wpml_object_id', $cat, 'link_category', true, $lang['language_code'] );
-
-			}
-
+		if ( is_admin() || !in_array( 'link_category', $taxonomies ) ) {
+			return $categories;
 		}
 
-		$new_cats = array_map( 'intval', $new_cats );
-		$new_cats = array_unique( $new_cats );
+		foreach ( $categories as &$category ) {
+			$package = $this->get_package( $category, 'category' );
+			$name_string_name = $this->get_category_string_name( 'name', $category );
+			$description_string_name = $this->get_category_string_name( 'description', $category );
 
-		remove_action('set_object_terms', array( 'WPML_Terms_Translations', 'set_object_terms_action' ), 10 );
-		wp_set_link_cats( $link_id, $new_cats );
-		add_action( 'set_object_terms', array( 'WPML_Terms_Translations', 'set_object_terms_action' ), 10, 6 );
+			$category->name = apply_filters( 'wpml_translate_string', $category->name, $name_string_name, $package );
+			$category->description = apply_filters( 'wpml_translate_string', $category->description, $description_string_name, $package );
+		}
+
+		return $categories;
 	}
+
+
+	/**
+	 * Hook to register link category strings
+	 * when a category is created or updated
+	 *
+	 * @param int $term_id Term ID.
+	 * @param int $tt_id   Term taxonomy ID.
+	 */
+	public function created_or_edited_link_category_action( $term_id, $tt_id ) {
+		$link_category = get_term( $term_id, 'link_category' );
+
+		if ( !$link_category ) {
+			return;
+		}
+
+		$package = $this->get_package( $link_category, 'category' );
+		$name_string_name = $this->get_category_string_name( 'name', $link_category );
+		$description_string_name = $this->get_category_string_name( 'description', $link_category );
+
+		do_action( 'wpml_register_string', $link_category->name, $name_string_name, $package, 'Link Category title', 'LINE');
+		do_action( 'wpml_register_string', $link_category->description, $description_string_name, $package, 'Link Category description', 'AREA');
+	}
+
+
+	/**
+	 * Hook in delete_terms to remove the
+	 * link category string package
+	 *
+	 * @param int     $term         Term ID.
+	 * @param int     $tt_id        Term taxonomy ID.
+	 * @param string  $taxonomy     Taxonomy slug.
+	 * @param mixed   $deleted_term Copy of the already-deleted term, in the form specified
+	 */
+	public function delete_term_action( $term, $tt_id, $taxonomy, $deleted_term ) {
+
+		if ( 'link_category' !== $taxonomy ) {
+			return;
+		}
+
+		$this->delete_strings_package( $term, 'category' );
+	}
+
 }
 
 new WPML_Link_Manager();
