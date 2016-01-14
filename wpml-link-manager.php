@@ -17,7 +17,7 @@ Class WPML_Link_Manager {
 		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) )
 			return false;
 
-		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
+		register_activation_hook( __FILE__, array( $this, 'plugin_activation_action' ) );
 
 		$this->hooks();
 	}
@@ -32,11 +32,11 @@ Class WPML_Link_Manager {
 		add_filter( 'get_bookmarks',                 array( $this, 'get_bookmarks_filter' ) );
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ) );
 		add_action( 'add_meta_boxes',                array( $this, 'add_meta_boxes_action' ) );
-		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action', 10, 2 ) );
+		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action' ) );
 		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
 		add_filter( 'get_terms',                     array( $this, 'get_terms_filter' ), 10, 3 );
-		add_action( 'created_link_category',         array( $this, 'created_or_edited_link_category_action' ), 10, 2 );
-		add_action( 'edited_link_category',          array( $this, 'created_or_edited_link_category_action' ), 10, 2 );
+		add_action( 'created_link_category',         array( $this, 'created_or_edited_link_category_action' ) );
+		add_action( 'edited_link_category',          array( $this, 'created_or_edited_link_category_action' ) );
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ), 10, 4 );
 		add_action( 'delete_term',                   array( $this, 'delete_term_action' ), 10, 4 );
 	}
@@ -251,7 +251,7 @@ Class WPML_Link_Manager {
 	/**
 	 * Perform some action when plugin is activated
 	 */
-	public function plugin_activation() {
+	public function plugin_activation_action() {
 		// Force package refresh
 		update_option( 'wpml-package-translation-refresh-required', true );
 	}
@@ -260,22 +260,23 @@ Class WPML_Link_Manager {
 	/**
 	 * If some links already exists before activation
 	 * we will create the missing packages
-	 *
-	 * @param string $type => empty string...
-	 * @param array $existing => NULL... have to verify the hook
 	 */
-	public function wpml_register_string_packages_action( $type = null, $existing = null ) {
-
-		if ( !empty( $type ) && $type != $this->package_type )
-			return false;
+	public function wpml_register_string_packages_action() {
 
 		$links = get_bookmarks();
 
-		if ( !$links )
-			return false;
+		if ( $links ) {
+			foreach ( $links as $link ) {
+				$this->add_strings_package( $link->link_id );
+			}
+		}
 
-		foreach ( $links as $link ) {
-			$this->add_strings_package( $link->link_id );
+		$link_categories = get_terms( 'link_category' );
+
+		if ( $link_categories ) {
+			foreach ( $link_categories as $link_category ) {
+				$this->created_or_edited_link_category_action( $link_category->term_id );
+			}
 		}
 
 		add_action( 'admin_notices', array( $this, 'links_updated_notice') );
@@ -328,9 +329,8 @@ Class WPML_Link_Manager {
 	 * when a category is created or updated
 	 *
 	 * @param int $term_id Term ID.
-	 * @param int $tt_id   Term taxonomy ID.
 	 */
-	public function created_or_edited_link_category_action( $term_id, $tt_id ) {
+	public function created_or_edited_link_category_action( $term_id ) {
 		$link_category = get_term( $term_id, 'link_category' );
 
 		if ( !$link_category ) {
