@@ -7,11 +7,14 @@
 
 Class WPML_Link_Manager {
 
+	private $pagenow;
 
 	private $package_type = 'Link Manager';
 
 
-	public function __construct() {
+	public function __construct( &$pagenow ) {
+
+		$this->pagenow = &$pagenow;
 
 		// Continue only if Link Manager is active
 		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) )
@@ -33,46 +36,42 @@ Class WPML_Link_Manager {
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ) );
 		add_action( 'add_meta_boxes',                array( $this, 'add_meta_boxes_action' ) );
 		add_action( 'wpml_register_string_packages', array( $this, 'wpml_register_string_packages_action' ) );
-		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
 		add_filter( 'get_terms',                     array( $this, 'get_terms_filter' ), 10, 3 );
 		add_action( 'created_link_category',         array( $this, 'created_or_edited_link_category_action' ) );
 		add_action( 'edited_link_category',          array( $this, 'created_or_edited_link_category_action' ) );
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ), 10, 4 );
 		add_action( 'delete_term',                   array( $this, 'delete_term_action' ), 10, 4 );
+		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
 	}
 
 
 	/**
-	 * "plugins_loaded" action
+	 * Fired when all plugins are loaded (including WPML and addons)
 	 */
 	public function plugins_loaded_action() {
-		add_action( 'load-link.php',      array( $this, 'load_link_action' ) );
-		add_action( 'load-edit-tags.php', array( $this, 'load_edit_tags_action' ) );
+		$this->maybe_change_admin_language_switcher();
 	}
 
-
 	/**
-	 * Action fired when link.php is loaded
-	 * Add the specific package language switcher
+	 * Replace the legacy admin language switcher
+	 * by the package language switcher if on
+	 * link edit page or link category edit page
 	 */
-	public function load_link_action() {
-		if ( isset( $_GET['action'] ) && $_GET['action'] == 'edit' && isset( $_GET['link_id'] ) ) {
-			$link_id = filter_input( INPUT_GET, 'link_id' );
-			$package = $this->get_package( $link_id );
+	public function maybe_change_admin_language_switcher() {
+
+		if ( $this->pagenow === 'link.php' || $this->pagenow === 'link-manager.php' ) {
 
 			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
-			do_action( 'wpml_show_package_language_admin_bar', $package );
-		}
-	}
 
+			if ( isset( $_GET['action'] ) && $_GET['action'] === 'edit' && isset( $_GET['link_id'] ) ) {
+				$link_id = filter_input(INPUT_GET, 'link_id');
+				$package = $this->get_package($link_id);
+				do_action('wpml_show_package_language_admin_bar', $package);
+			}
 
-	/**
-	 * Action fired when edit-tags.php is loaded
-	 * Add the specific language switcher
-	 */
-	public function load_edit_tags_action() {
-		if ( isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] == 'link_category' ) {
-			add_filter( 'wpml_show_admin_language_switcher', '__return_false' ); // TODO: Too late because it is fired in "plugins_loaded" with priority 1. Needs to be fired later!!!
+		} else if ( $this->pagenow === 'edit-tags.php' && isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] === 'link_category' ) {
+
+			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
 
 			if ( isset( $_GET['tag_ID'] ) ) {
 				$tag_id = filter_input( INPUT_GET, 'tag_ID' );
@@ -366,4 +365,5 @@ Class WPML_Link_Manager {
 
 }
 
-new WPML_Link_Manager();
+global $pagenow;
+new WPML_Link_Manager( $pagenow );
