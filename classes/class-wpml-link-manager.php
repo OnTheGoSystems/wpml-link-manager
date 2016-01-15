@@ -88,7 +88,7 @@ Class WPML_Link_Manager {
 	 */
 	public function get_bookmarks_filter( $links ) {
 		if ( !is_admin() ) {
-			foreach ($links as $link) {
+			foreach ( $links as &$link ) {
 				$package = $this->helper->get_package($link);
 				$name_string_name = $this->helper->get_link_string_name('name', $link);
 				$description_string_name = $this->helper->get_link_string_name('description', $link);
