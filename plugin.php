@@ -6,10 +6,13 @@
  */
 
 define( 'WPML_LINK_MANAGER_PATH', dirname( __FILE__ ) );
-require_once( WPML_LINK_MANAGER_PATH . '/classes/wpml-link-manager.php' );
 
 function wpml_link_manager_load_plugin() {
     global $pagenow;
+
+    $wpml_auto_loader_instance = WPML_Auto_Loader::get_instance();
+    $wpml_auto_loader_instance->register( WPML_LINK_MANAGER_PATH . '/' );
+
     new WPML_Link_Manager( $pagenow );
 }
 add_action( 'wpml_loaded', 'wpml_link_manager_load_plugin' );
