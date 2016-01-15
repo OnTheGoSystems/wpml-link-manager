@@ -10,14 +10,25 @@ Class WPML_Link_Manager {
 	public function __construct( &$pagenow ) {
 
 		$this->pagenow = &$pagenow;
+		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
+
+	}
+
+
+	/**
+	 * Fired when all plugins are loaded (including WPML and addons)
+	 */
+	public function plugins_loaded_action() {
 
 		// Continue only if Link Manager is active
-		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) )
+		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) ) {
 			return false;
+		}
 
 		register_activation_hook( __FILE__, array( $this, 'plugin_activation_action' ) );
 
 		$this->hooks();
+		$this->maybe_add_package_language_switcher();
 	}
 
 
@@ -36,43 +47,31 @@ Class WPML_Link_Manager {
 		add_action( 'edited_link_category',          array( $this, 'created_or_edited_link_category_action' ) );
 		add_action( 'deleted_link',                  array( $this, 'deleted_link_action' ), 10, 4 );
 		add_action( 'delete_term',                   array( $this, 'delete_term_action' ), 10, 4 );
-		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
 	}
 
 
 	/**
-	 * Fired when all plugins are loaded (including WPML and addons)
-	 */
-	public function plugins_loaded_action() {
-		$this->maybe_change_admin_language_switcher();
-	}
-
-	/**
-	 * Replace the legacy admin language switcher
-	 * by the package language switcher if on
+	 * Display the package language switcher if on
 	 * link edit page or link category edit page
 	 */
-	public function maybe_change_admin_language_switcher() {
+	public function maybe_add_package_language_switcher() {
 
-		if ( $this->pagenow === 'link.php' || $this->pagenow === 'link-manager.php' ) {
+		if ( $this->pagenow === 'link.php'
+			&& isset( $_GET['action'] ) && $_GET['action'] === 'edit' && isset( $_GET['link_id'] ) ) {
 
-			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
-
-			if ( isset( $_GET['action'] ) && $_GET['action'] === 'edit' && isset( $_GET['link_id'] ) ) {
 				$link_id = filter_input(INPUT_GET, 'link_id');
 				$package = $this->get_package($link_id);
 				do_action('wpml_show_package_language_admin_bar', $package);
-			}
 
-		} else if ( $this->pagenow === 'edit-tags.php' && isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] === 'link_category' ) {
+		} else if ( $this->pagenow === 'edit-tags.php'
+			&& isset( $_GET['taxonomy'] )
+			&& $_GET['taxonomy'] === 'link_category'
+			&& isset( $_GET['tag_ID'] ) ) {
 
-			add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
-
-			if ( isset( $_GET['tag_ID'] ) ) {
 				$tag_id = filter_input( INPUT_GET, 'tag_ID' );
 				$package = $this->get_package( $tag_id, 'category' );
 				do_action( 'wpml_show_package_language_admin_bar', $package );
-			}
+
 		}
 	}
 
