@@ -3,13 +3,14 @@
 Class WPML_Link_Manager {
 
 	private $pagenow;
-
+	private $helper;
 	private $package_type = 'Link Manager';
 
 
 	public function __construct( &$pagenow ) {
 
 		$this->pagenow = &$pagenow;
+		$this->helper  = new WPML_Link_Manager_Helper( $this->package_type );
 		add_action( 'plugins_loaded',                array( $this, 'plugins_loaded_action' ) );
 
 	}
@@ -60,7 +61,7 @@ Class WPML_Link_Manager {
 			&& isset( $_GET['action'] ) && $_GET['action'] === 'edit' && isset( $_GET['link_id'] ) ) {
 
 				$link_id = filter_input(INPUT_GET, 'link_id');
-				$package = $this->get_package($link_id);
+				$package = $this->helper->get_package($link_id);
 				do_action('wpml_show_package_language_admin_bar', $package);
 
 		} else if ( $this->pagenow === 'edit-tags.php'
@@ -69,7 +70,7 @@ Class WPML_Link_Manager {
 			&& isset( $_GET['tag_ID'] ) ) {
 
 				$tag_id = filter_input( INPUT_GET, 'tag_ID' );
-				$package = $this->get_package( $tag_id, 'category' );
+				$package = $this->helper->get_package( $tag_id, 'category' );
 				do_action( 'wpml_show_package_language_admin_bar', $package );
 
 		}
@@ -96,9 +97,9 @@ Class WPML_Link_Manager {
 
 		$link = get_bookmark( $link_id );
 
-		$package = $this->get_package( $link );
-		$name_string_name = $this->get_link_string_name( 'name', $link );
-		$description_string_name = $this->get_link_string_name( 'description', $link );
+		$package = $this->helper->get_package( $link );
+		$name_string_name = $this->helper->get_link_string_name( 'name', $link );
+		$description_string_name = $this->helper->get_link_string_name( 'description', $link );
 
 		do_action( 'wpml_register_string', $link->link_name, $name_string_name, $package, 'Link title', 'LINE');
 		do_action( 'wpml_register_string', $link->link_description, $description_string_name, $package, 'Link description', 'AREA');
@@ -121,9 +122,9 @@ Class WPML_Link_Manager {
 
 		foreach ( $links as $link ) {
 
-			$package = $this->get_package( $link );
-			$name_string_name = $this->get_link_string_name( 'name', $link );
-			$description_string_name = $this->get_link_string_name( 'description', $link );
+			$package = $this->helper->get_package( $link );
+			$name_string_name = $this->helper->get_link_string_name( 'name', $link );
+			$description_string_name = $this->helper->get_link_string_name( 'description', $link );
 
 			$link->link_name = apply_filters( 'wpml_translate_string', $link->link_name, $name_string_name, $package );
 			$link->link_description = apply_filters( 'wpml_translate_string', $link->link_description, $description_string_name, $package );
@@ -167,78 +168,9 @@ Class WPML_Link_Manager {
 	public function render_package_language_ui() {
 		$link_id = isset( $_GET['link_id'] ) ? $_GET['link_id'] : false;
 
-		$package = $this->get_package( $link_id );
+		$package = $this->helper->get_package( $link_id );
 
 		do_action( 'wpml_show_package_language_ui', $package );
-	}
-
-
-	/**
-	 * Returns a string package
-	 *
-	 * @param mixed int|object $link or $category
-	 * @param string $subtype
-	 *
-	 * @return array $package
-	 */
-	private function get_package( $link_or_cat, $subtype = 'link' ) {
-
-		$package_subtype = $this->package_type . ' - ' . $subtype;
-
-		/**
-		 * More data if object
-		 * This is important when we are registering
-		 * the package in the database
-		 */
-		if ( is_object( $link_or_cat ) && 'link' === $subtype ) {
-			$package = array(
-				'kind'      => $package_subtype,
-				'name'      => $link_or_cat->link_id,
-				'title'     => $link_or_cat->link_name,
-				'edit_link' => admin_url( 'link.php?action=edit&link_id=' . $link_or_cat->link_id ),
-				'view_link' => $link_or_cat->link_url,
-			);
-		} elseif ( is_object( $link_or_cat ) && 'category' === $subtype ) {
-			$package = array(
-				'kind'      => $package_subtype,
-				'name'      => $link_or_cat->term_id,
-				'title'     => $link_or_cat->name,
-				'edit_link' => admin_url( 'edit-tags.php?action=edit&taxonomy=link_category&tag_ID=' . $link_or_cat->term_id ),
-			);
-		} else {
-			$package = array(
-				'kind' 		=> $package_subtype,
-				'name' 		=> $link_or_cat,
-			);
-		}
-
-		return $package;
-	}
-
-
-	/**
-	 * Format the link string name including the link ID
-	 *
-	 * @param string $name
-	 * @param object $link
-	 *
-	 * @return string formatted
-	 */
-	private function get_link_string_name( $name, $link ) {
-		return 'link-' . $link->link_id . '-' . $name;
-	}
-
-
-	/**
-	 * Format the category string name including the term ID
-	 *
-	 * @param string $name
-	 * @param object $category
-	 *
-	 * @return string formatted
-	 */
-	private function get_category_string_name( $name, $category ) {
-		return 'link-category-' . $category->term_id . '-' . $name;
 	}
 
 
@@ -306,9 +238,9 @@ Class WPML_Link_Manager {
 		}
 
 		foreach ( $categories as &$category ) {
-			$package = $this->get_package( $category, 'category' );
-			$name_string_name = $this->get_category_string_name( 'name', $category );
-			$description_string_name = $this->get_category_string_name( 'description', $category );
+			$package = $this->helper->get_package( $category, 'category' );
+			$name_string_name = $this->helper->get_category_string_name( 'name', $category );
+			$description_string_name = $this->helper->get_category_string_name( 'description', $category );
 
 			$category->name = apply_filters( 'wpml_translate_string', $category->name, $name_string_name, $package );
 			$category->description = apply_filters( 'wpml_translate_string', $category->description, $description_string_name, $package );
@@ -331,9 +263,9 @@ Class WPML_Link_Manager {
 			return;
 		}
 
-		$package = $this->get_package( $link_category, 'category' );
-		$name_string_name = $this->get_category_string_name( 'name', $link_category );
-		$description_string_name = $this->get_category_string_name( 'description', $link_category );
+		$package = $this->helper->get_package( $link_category, 'category' );
+		$name_string_name = $this->helper->get_category_string_name( 'name', $link_category );
+		$description_string_name = $this->helper->get_category_string_name( 'description', $link_category );
 
 		do_action( 'wpml_register_string', $link_category->name, $name_string_name, $package, 'Link Category title', 'LINE');
 		do_action( 'wpml_register_string', $link_category->description, $description_string_name, $package, 'Link Category description', 'AREA');
