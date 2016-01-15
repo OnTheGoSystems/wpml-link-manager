@@ -5,6 +5,8 @@
  * Version: 0.1-dev
  */
 
+define( 'WPML_LINK_MANAGER_PATH', dirname( __FILE__ ) );
+
 function wpml_link_manager_load_plugin() {
     global $pagenow;
     new WPML_Link_Manager( $pagenow );
