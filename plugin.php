@@ -22,10 +22,7 @@ add_action( 'wpml_loaded', 'wpml_link_manager_load_plugin' );
  */
 function maybe_remove_admin_language_switcher() {
     global $pagenow;
-    if ( $pagenow === 'link.php'
-        || $pagenow === 'link-manager.php'
-        || $pagenow === 'link-add.php'
-        || ( $pagenow === 'edit-tags.php' && isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] === 'link_category' ) ) {
+	if ( ( isset( $_GET['taxonomy'] ) && 'link_category' === $_GET['taxonomy'] && 'edit-tags.php' === $pagenow ) || in_array( $pagenow, array( 'link.php', 'link-manager.php', 'link-add.php' ), true ) ) {
         add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
     }
 }
