@@ -1,9 +1,4 @@
 <?php
-/* Plugin Name: WPML Link Manager
- * Description: Makes Link Manager (in the core before WP 3.5) compatible with WPML > 3.2
- * Author: Pierre S.
- * Version: 0.1-beta
- */
 
 Class WPML_Link_Manager {
 
@@ -364,6 +359,3 @@ Class WPML_Link_Manager {
 	}
 
 }
-
-global $pagenow;
-new WPML_Link_Manager( $pagenow );
