@@ -115,8 +115,9 @@ Class WPML_Link_Manager {
 	 */
 	public function get_bookmarks_filter( $links ) {
 
-		if ( is_admin() )
+		if ( is_admin() ) {
 			return $links;
+		}
 
 		foreach ( $links as $link ) {
 
