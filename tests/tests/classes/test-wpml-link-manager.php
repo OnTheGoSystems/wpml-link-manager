@@ -9,9 +9,9 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         global $wpdb;
 
         $args = array(
-            "link_url"		=> 'http://test.com',
-            "link_name"		=> 'The link name',
-            "link_description"	=> 'The link description',
+	        'link_url'         => 'http://test.com',
+	        'link_name'        => 'The link name',
+	        'link_description' => 'The link description',
         );
         $link_id = wp_insert_link( $args );
         $pagenow = 'link.php';
