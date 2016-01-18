@@ -13,7 +13,9 @@ function wpml_link_manager_load_plugin() {
     $wpml_auto_loader_instance = WPML_Auto_Loader::get_instance();
     $wpml_auto_loader_instance->register( WPML_LINK_MANAGER_PATH . '/' );
 
-    new WPML_Link_Manager( $pagenow );
+    $package_type = 'Link Manager';
+    $helper = new WPML_Link_Manager_Helper( $package_type );
+    new WPML_Link_Manager( $pagenow, $helper );
 }
 add_action( 'wpml_loaded', 'wpml_link_manager_load_plugin' );
 

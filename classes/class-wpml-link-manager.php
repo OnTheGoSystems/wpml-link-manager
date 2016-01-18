@@ -4,18 +4,14 @@ Class WPML_Link_Manager {
 
 	private $pagenow;
 	private $helper;
-	private $package_type = 'Link Manager';
 
-	public function __construct( &$pagenow ) {
-
+	public function __construct( &$pagenow, &$helper ) {
 		$this->pagenow = &$pagenow;
-		$this->helper  = new WPML_Link_Manager_Helper( $this->package_type );
+		$this->helper  = &$helper;
 		add_action( 'plugins_loaded', array( $this, 'plugins_loaded_action' ) );
-
 	}
 
 	public function plugins_loaded_action() {
-
 		if ( !apply_filters( 'pre_option_link_manager_enabled', false ) ) {
 			return;
 		}
@@ -112,7 +108,7 @@ Class WPML_Link_Manager {
 	 * @param string $subtype
 	 */
 	private function delete_strings_package( $link_id, $subtype ) {
-		do_action( 'wpml_delete_package_action', $link_id, $this->package_type . ' - ' . $subtype );
+		do_action( 'wpml_delete_package_action', $link_id, $this->helper->package_type . ' - ' . $subtype );
 	}
 
 	public function add_meta_boxes_action() {

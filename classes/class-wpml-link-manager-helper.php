@@ -4,6 +4,9 @@ Class WPML_Link_Manager_Helper {
 
     private $package_type;
 
+    /**
+     * @param string $package_type
+     */
     function __construct( $package_type ) {
         $this->package_type = $package_type;
     }
