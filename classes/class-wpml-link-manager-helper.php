@@ -7,8 +7,12 @@ Class WPML_Link_Manager_Helper {
     /**
      * @param string $package_type
      */
-    function __construct( $package_type ) {
+    public function __construct( $package_type ) {
         $this->package_type = $package_type;
+    }
+
+    public function get_package_type() {
+        return $this->package_type;
     }
 
     /**

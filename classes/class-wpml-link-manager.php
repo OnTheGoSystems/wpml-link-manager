@@ -108,7 +108,7 @@ Class WPML_Link_Manager {
 	 * @param string $subtype
 	 */
 	private function delete_strings_package( $link_id, $subtype ) {
-		do_action( 'wpml_delete_package_action', $link_id, $this->helper->package_type . ' - ' . $subtype );
+		do_action( 'wpml_delete_package_action', $link_id, $this->helper->get_package_type() . ' - ' . $subtype );
 	}
 
 	public function add_meta_boxes_action() {
