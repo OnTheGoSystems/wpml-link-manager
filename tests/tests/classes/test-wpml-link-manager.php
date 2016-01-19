@@ -20,15 +20,15 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         );
         $link_id = wp_insert_link( $args );
 
-        $this->lm->add_or_edit_link_action( $link_id );
+        $link_has_strings = $this->link_has_strings( $link_id );
 
-        $this->assertTrue( $this->link_has_strings( $link_id ) );
+        $this->assertTrue( $link_has_strings );
 
     }
 
     public function test_get_bookmarks_filter() {
         global $sitepress;
-        $this->instantiate_link_manager();
+        $this->instantiate_link_manager( 'link.php' ); // To allow registering strings
 
         $orig_lang    = 'en';
         $sec_lang     = 'fr';
@@ -52,13 +52,16 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
             $context = $this->get_link_string_context( $link_id );
 
-            $sitepress->switch_lang( $sec_lang );
             // Add translations
-            $name_st_id = icl_get_string_id( $this->lm_helper->get_link_string_name( 'name', $links[ $i ] ), $context );
+            $name_st_id = icl_get_string_id( $links[ $i ]->link_name, $context, $this->lm_helper->get_link_string_name( 'name', $links[ $i ] ) );
+            $desc_st_id = icl_get_string_id( $links[ $i ]->link_description, $context, $this->lm_helper->get_link_string_name( 'description', $links[ $i ] ) );
+
             icl_add_string_translation( $name_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
-            $desc_st_id = icl_get_string_id( $this->lm_helper->get_link_string_name( 'description', $links[ $i ] ), $context );
-            icl_add_string_translation( $desc_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
+            icl_add_string_translation( $desc_st_id, $sec_lang, $desc_base . $i . $sec_lang, ICL_TM_COMPLETE );
         }
+
+        $sitepress->switch_lang( $sec_lang );
+        $this->instantiate_link_manager( 'front' ); // Switch to front end
 
         $translated_links = $this->lm->get_bookmarks_filter( $links );
 
@@ -70,7 +73,7 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
     }
 
     public function test_deleted_link_action() {
-        $this->instantiate_link_manager();
+        $this->instantiate_link_manager( 'link.php' );
 
         $args = array(
                 "link_url"		    => 'http://test.com',
@@ -79,12 +82,15 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         );
 
         $link_id = wp_insert_link( $args );
+        $link    = get_bookmark( $link_id );
 
-        $this->assertTrue( $this->link_has_strings( $link_id ) );
+        $package = $this->lm_helper->get_package( $link, 'link' );
+
+        $this->assertTrue( $this->package_exist_in_DB( $package ) );
 
         $this->lm->deleted_link_action( $link_id );
 
-        $this->assertFalse( $this->link_has_strings( $link_id ) );
+        $this->assertFalse( $this->package_exist_in_DB( $package ) );
 
     }
 
@@ -105,10 +111,24 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
     }
 
-    private function instantiate_link_manager( $pagenow = 'index.php' ) {
+    private function instantiate_link_manager( $pagenow = 'front' ) {
+
+        set_current_screen( $pagenow );
+
+        $this->reload_package_translation(); // depends on current screen
+
         $package_type    = 'Link Manager';
         $this->lm_helper = new WPML_Link_Manager_Helper( $package_type );
         $this->lm        = new WPML_Link_Manager( $pagenow, $this->lm_helper );
+
+        // Fire again plugins_loaded action
+        $this->lm->plugins_loaded_action();
+    }
+
+    private function reload_package_translation() {
+        global $WPML_package_translation;
+        $WPML_package_translation = new WPML_Package_Translation();
+        $WPML_package_translation->loaded();
     }
 
     private function get_link_string_context( $link_id ) {
@@ -117,18 +137,27 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
     }
 
     private function link_has_strings( $link_id ) {
-        global $wpdb;
         $ret = false;
-        $wpml_st_string_factory = new WPML_ST_String_Factory( $wpdb );
-
         // check if name & description strings are registered
         $link = get_bookmark( $link_id );
         $context = $this->get_link_string_context( $link_id );
         $name_name = $this->lm_helper->get_link_string_name( 'name', $link );
         $name_desc = $this->lm_helper->get_link_string_name( 'description', $link );
 
-        $ret = icl_get_string_id( $link->link_name, $context, $name_name ) &&  icl_get_string_id( $link->link_description, $context, $name_name );
+        if ( icl_get_string_id( $link->link_name, $context, $name_name ) && icl_get_string_id( $link->link_description, $context, $name_desc ) ) {
+            $ret = true;
+        }
 
-        return $ret;
+        return (bool) $ret;
+    }
+
+    private function package_exist_in_DB( $package ) {
+        global $wpdb;
+
+        $query         = "SELECT ID FROM {$wpdb->prefix}icl_string_packages WHERE kind=%s AND name=%s";
+        $query_prepare = $wpdb->prepare( $query, $package['kind'], $package['name'] );
+        $ret           = $wpdb->get_var( $query_prepare );
+
+        return (bool) $ret;
     }
 }
