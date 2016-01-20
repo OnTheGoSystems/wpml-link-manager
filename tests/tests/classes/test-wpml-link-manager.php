@@ -7,8 +7,8 @@
 class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
     // Set by $this->instantiate_link_manager();
-    protected $lm;
-    protected $lm_helper;
+    private $lm;
+    private $lm_helper;
 
     public function test_add_or_edit_link_action() {
         $this->instantiate_link_manager( 'link.php' );
