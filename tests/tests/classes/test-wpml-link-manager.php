@@ -20,10 +20,18 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         );
         $link_id = wp_insert_link( $args );
 
-        $link_has_strings = $this->link_has_strings( $link_id );
+        // check if name & description strings are registered
+        $link = get_bookmark( $link_id );
+        $context = $this->get_link_string_context( $link_id );
+        $name_name = $this->lm_helper->get_link_string_name( 'name', $link );
+        $name_desc = $this->lm_helper->get_link_string_name( 'description', $link );
+
+        $link_has_strings = false;
+        if ( icl_get_string_id( $link->link_name, $context, $name_name ) && icl_get_string_id( $link->link_description, $context, $name_desc ) ) {
+            $link_has_strings = true;
+        }
 
         $this->assertTrue( $link_has_strings );
-
     }
 
     public function test_get_bookmarks_filter() {
@@ -158,7 +166,15 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         $term = wp_insert_term( $cat_name, $taxonomy, $args );
         $cat = get_term( $term['term_id'], $taxonomy );
 
-        $cat_has_strings = $this->cat_has_strings( $cat );
+        // check if name & description strings are registered
+        $context = $this->get_category_string_context( $cat );
+        $name_name = $this->lm_helper->get_category_string_name( 'name', $cat );
+        $name_desc = $this->lm_helper->get_category_string_name( 'description', $cat );
+
+        $cat_has_strings = false;
+        if ( icl_get_string_id( $cat->name, $context, $name_name ) && icl_get_string_id( $cat->description, $context, $name_desc ) ) {
+            $cat_has_strings = true;
+        }
 
         $this->assertTrue( $cat_has_strings );
     }
@@ -212,35 +228,6 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
     private function get_category_string_context( $cat ) {
         $package_helper = new WPML_Package_Helper();
         return $package_helper->get_string_context_from_package( $this->lm_helper->get_package( $cat->term_id, 'category' ) );
-    }
-
-    private function link_has_strings( $link_id ) {
-        $ret = false;
-        // check if name & description strings are registered
-        $link = get_bookmark( $link_id );
-        $context = $this->get_link_string_context( $link_id );
-        $name_name = $this->lm_helper->get_link_string_name( 'name', $link );
-        $name_desc = $this->lm_helper->get_link_string_name( 'description', $link );
-
-        if ( icl_get_string_id( $link->link_name, $context, $name_name ) && icl_get_string_id( $link->link_description, $context, $name_desc ) ) {
-            $ret = true;
-        }
-
-        return (bool) $ret;
-    }
-
-    private function cat_has_strings( $cat ) {
-        $ret = false;
-        // check if name & description strings are registered
-        $context = $this->get_category_string_context( $cat );
-        $name_name = $this->lm_helper->get_category_string_name( 'name', $cat );
-        $name_desc = $this->lm_helper->get_category_string_name( 'description', $cat );
-
-        if ( icl_get_string_id( $cat->name, $context, $name_name ) && icl_get_string_id( $cat->description, $context, $name_desc ) ) {
-            $ret = true;
-        }
-
-        return (bool) $ret;
     }
 
     private function package_exist_in_DB( $package ) {
