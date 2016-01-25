@@ -29,3 +29,8 @@ function wpml_link_manager_maybe_remove_admin_ls() {
     }
 }
 add_action( 'wpml_before_init', 'wpml_link_manager_maybe_remove_admin_ls' );
+
+function wpml_link_manager_activation() {
+    update_option( 'wpml-package-translation-refresh-required', true );
+}
+register_activation_hook( __FILE__, 'wpml_link_manager_activation' );

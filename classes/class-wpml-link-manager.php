@@ -20,8 +20,6 @@ Class WPML_Link_Manager {
 			return;
 		}
 
-		register_activation_hook( __FILE__, array( $this, 'plugin_activation_action' ) );
-
 		$this->hooks();
 		$this->maybe_add_package_language_switcher();
 	}
@@ -125,10 +123,6 @@ Class WPML_Link_Manager {
 		do_action( 'wpml_show_package_language_ui', $package );
 	}
 
-	public function plugin_activation_action() {
-		update_option( 'wpml-package-translation-refresh-required', true );
-	}
-
 	public function wpml_register_string_packages_action() {
 
 		$links = get_bookmarks();
@@ -147,15 +141,10 @@ Class WPML_Link_Manager {
 			}
 		}
 
-		add_action( 'admin_notices', array( $this, 'links_updated_notice') );
-	}
-
-	public function links_updated_notice() {
-	?>
-		<div class="updated">
-			<p><?php _e( 'Previous existing links are now available for translation', 'wpml-link-manager' ); ?></p>
-		</div>
-	<?php
+		ICL_AdminNotifier::add_instant_message(
+			__( 'Previous existing links are now available for translation', 'wpml-link-manager' ),
+			'update'
+		);
 	}
 
 	/**
