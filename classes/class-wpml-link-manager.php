@@ -5,6 +5,10 @@ Class WPML_Link_Manager {
 	private $pagenow;
 	private $helper;
 
+	/**
+	 * @param object $pagenow
+	 * @param object $helper
+	 */
 	public function __construct( &$pagenow, &$helper ) {
 		$this->pagenow = &$pagenow;
 		$this->helper  = &$helper;
@@ -38,17 +42,15 @@ Class WPML_Link_Manager {
 
 	public function maybe_add_package_language_switcher() {
 		if ( $this->pagenow === 'link.php'
-			&& isset( $_GET['action'] )
+			&& isset( $_GET['action'], $_GET['link_id'] )
 			&& $_GET['action'] === 'edit'
-			&& isset( $_GET['link_id'] )
 		) {
 				$link_id = filter_input(INPUT_GET, 'link_id');
 				$package = $this->helper->get_package($link_id);
 				do_action('wpml_show_package_language_admin_bar', $package);
 		} else if ( $this->pagenow === 'edit-tags.php'
-					&& isset( $_GET['taxonomy'] )
+					&& isset( $_GET['taxonomy'], $_GET['tag_ID'] )
 					&& $_GET['taxonomy'] === 'link_category'
-					&& isset( $_GET['tag_ID'] )
 		) {
 				$tag_id = filter_input( INPUT_GET, 'tag_ID' );
 				$package = $this->helper->get_package( $tag_id, 'category' );
@@ -78,7 +80,7 @@ Class WPML_Link_Manager {
 	}
 
 	/**
-	 * @param array $link objects from get_bookmark()
+	 * @param array $links objects from get_bookmark()
 	 *
 	 * @return array
 	 */
@@ -159,7 +161,6 @@ Class WPML_Link_Manager {
 	/**
 	 * @param array $categories
 	 * @param array $taxonomies
-	 * @param array $args
 	 *
 	 * @return string $cat_name Category name
 	 */

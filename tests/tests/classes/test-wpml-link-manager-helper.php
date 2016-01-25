@@ -1,8 +1,5 @@
 <?php
 
-//require_once( WPML_LINK_MANAGER_PATH . '/classes/class-wpml-link-manager-helper.php' );
-//require_once( WPML_CORE_ST_PATH . '/inc/package-translation/inc/wpml-package-translation-helper.class.php' );
-
 class Test_WPML_Link_Manager_Helper extends WPML_UnitTestCase {
 
 	private $lm_helper;
@@ -22,7 +19,6 @@ class Test_WPML_Link_Manager_Helper extends WPML_UnitTestCase {
 	}
 
 	public function test_get_package() {
-		// Test link
 		$link = new stdClass();
 		$link->link_id   = 3;
 		$link->link_name = 'test link';
@@ -30,18 +26,15 @@ class Test_WPML_Link_Manager_Helper extends WPML_UnitTestCase {
 		$package = $this->lm_helper->get_package( $link );
 		$this->assertEquals( 'link', substr( $package['kind'], -4, 4 ) );
 
-		// Test cat
 		$cat = new stdClass();
 		$cat->term_id = 6;
 		$cat->name    = 'test cat';
 		$package = $this->lm_helper->get_package( $cat, 'category' );
 		$this->assertEquals( 'category', substr( $package['kind'], -8, 8 ) );
 
-		// Test link ID
 		$package = $this->lm_helper->get_package( 19 );
 		$this->assertEquals( 'link', substr( $package['kind'], -4, 4 ) );
 
-		// Test cat ID
 		$package = $this->lm_helper->get_package( 19, 'category' );
 		$this->assertEquals( 'category', substr( $package['kind'], -8, 8 ) );
 	}

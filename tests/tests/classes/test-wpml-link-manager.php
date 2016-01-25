@@ -1,12 +1,7 @@
 <?php
 
-//require_once( WPML_LINK_MANAGER_PATH . '/classes/class-wpml-link-manager.php' );
-//require_once( WPML_LINK_MANAGER_PATH . '/classes/class-wpml-link-manager-helper.php' );
-//require_once( WPML_CORE_ST_PATH . '/inc/package-translation/inc/wpml-package-translation-helper.class.php' );
-
 class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
-    // Set by $this->instantiate_link_manager();
     private $lm;
     private $lm_helper;
 
@@ -36,7 +31,7 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
     public function test_get_bookmarks_filter() {
         global $sitepress;
-        $this->instantiate_link_manager( 'link.php' ); // To allow registering strings
+        $this->instantiate_link_manager( 'link.php' );
 
         $orig_lang    = 'en';
         $sec_lang     = 'fr';
@@ -45,7 +40,6 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
         $sitepress->switch_lang( $orig_lang );
 
-        // Create 3 links and add translations
         $links = array();
         for ($i=0; $i < 3; $i++) {
             $args = array(
@@ -59,12 +53,11 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
             $context = $this->get_link_string_context( $link_id );
 
-            // Add translations
             $name_st_id = icl_get_string_id( $links[ $i ]->link_name, $context, $this->lm_helper->get_link_string_name( 'name', $links[ $i ] ) );
             $desc_st_id = icl_get_string_id( $links[ $i ]->link_description, $context, $this->lm_helper->get_link_string_name( 'description', $links[ $i ] ) );
 
-            $name_st_tr_id = icl_add_string_translation( $name_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
-            $desc_st_tr_id =icl_add_string_translation( $desc_st_id, $sec_lang, $desc_base . $i . $sec_lang, ICL_TM_COMPLETE );
+            icl_add_string_translation( $name_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
+            icl_add_string_translation( $desc_st_id, $sec_lang, $desc_base . $i . $sec_lang, ICL_TM_COMPLETE );
         }
 
         $sitepress->switch_lang( $sec_lang );
@@ -112,7 +105,7 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
     public function test_get_terms_filter() {
         global $sitepress;
-        $this->instantiate_link_manager( 'edit-tags.php' ); // Create new categories in backend first
+        $this->instantiate_link_manager( 'edit-tags.php' );
 
         $orig_lang    = 'en';
         $sec_lang     = 'fr';
@@ -122,7 +115,6 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
         $sitepress->switch_lang( $orig_lang );
 
-        // Create 3 cats and add translations
         $cats = $cat_ids = array();
         for ($i=0; $i < 3; $i++) {
             $term       = wp_insert_term( $name_base . $i, $taxonomy, array( 'description' => $desc_base . $i ) );
@@ -131,20 +123,18 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
             $context = $this->get_category_string_context( $cats[ $i ] );
 
-            // Add translations
             $name_st_id = icl_get_string_id( $cats[ $i ]->name, $context, $this->lm_helper->get_category_string_name( 'name', $cats[ $i ] ) );
             $desc_st_id = icl_get_string_id( $cats[ $i ]->description, $context, $this->lm_helper->get_category_string_name( 'description', $cats[ $i ] ) );
 
-            $name_st_tr_id = icl_add_string_translation( $name_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
-            $desc_st_tr_id = icl_add_string_translation( $desc_st_id, $sec_lang, $desc_base . $i . $sec_lang, ICL_TM_COMPLETE );
+            icl_add_string_translation( $name_st_id, $sec_lang, $name_base . $i . $sec_lang, ICL_TM_COMPLETE );
+            icl_add_string_translation( $desc_st_id, $sec_lang, $desc_base . $i . $sec_lang, ICL_TM_COMPLETE );
         }
 
-        // Switch on front to translate the categories
         $sitepress->switch_lang( $sec_lang );
-        $this->instantiate_link_manager( 'front' ); // Switch to front end
+        $this->instantiate_link_manager( 'front' );
 
         global $WPML_String_Translation;
-        $WPML_String_Translation->clear_string_filter( 'fr' ); // Doesn't work if string filter is not refreshed
+        $WPML_String_Translation->clear_string_filter( 'fr' );
 
         $translated_cats = $this->lm->get_terms_filter( $cats, array( $taxonomy ) );
 
@@ -200,11 +190,14 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         $this->assertFalse( $this->package_exist_in_DB( $package ) );
     }
 
+    /**
+     * @param string $pagenow
+     */
     private function instantiate_link_manager( $pagenow = 'front' ) {
 
         set_current_screen( $pagenow );
 
-        $this->reload_package_translation(); // depends on current screen
+        $this->reload_package_translation();
 
         $package_type    = 'Link Manager';
         $this->lm_helper = new WPML_Link_Manager_Helper( $package_type );
@@ -220,16 +213,31 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         $WPML_package_translation->loaded();
     }
 
+    /**
+     * @param int $link_id
+     *
+     * @return string
+     */
     private function get_link_string_context( $link_id ) {
         $package_helper = new WPML_Package_Helper();
         return $package_helper->get_string_context_from_package( $this->lm_helper->get_package( $link_id, 'link' ) );
     }
 
+    /**
+     * @param object $cat
+     *
+     * @return string
+     */
     private function get_category_string_context( $cat ) {
         $package_helper = new WPML_Package_Helper();
         return $package_helper->get_string_context_from_package( $this->lm_helper->get_package( $cat->term_id, 'category' ) );
     }
 
+    /**
+     * @param array $package
+     *
+     * @return bool
+     */
     private function package_exist_in_DB( $package ) {
         global $wpdb;
 

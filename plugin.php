@@ -19,19 +19,13 @@ function wpml_link_manager_load_plugin() {
 }
 add_action( 'wpml_loaded', 'wpml_link_manager_load_plugin' );
 
-
-/**
- * Remove admin language switcher in some pages
- * todo: Include this function in WPML_Link_Manager class when "wpml_show_admin_language_switcher" will be later
- * => Currently this filter is fired in "plugins_loaded" (priority 1)
- */
 function maybe_remove_admin_language_switcher() {
     global $pagenow;
     if ( $pagenow === 'link.php'
         || $pagenow === 'link-manager.php'
         || $pagenow === 'link-add.php'
         || ( $pagenow === 'edit-tags.php' && isset( $_GET['taxonomy'] ) && $_GET['taxonomy'] === 'link_category' ) ) {
-        add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
+            add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
     }
 }
 add_action( 'wpml_before_init', 'maybe_remove_admin_language_switcher' );
