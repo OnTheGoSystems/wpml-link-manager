@@ -19,7 +19,7 @@ function wpml_link_manager_load_plugin() {
 }
 add_action( 'wpml_loaded', 'wpml_link_manager_load_plugin' );
 
-function maybe_remove_admin_language_switcher() {
+function wpml_link_manager_maybe_remove_admin_ls() {
     global $pagenow;
     if ( $pagenow === 'link.php'
         || $pagenow === 'link-manager.php'
@@ -28,4 +28,4 @@ function maybe_remove_admin_language_switcher() {
             add_filter( 'wpml_show_admin_language_switcher', '__return_false' );
     }
 }
-add_action( 'wpml_before_init', 'maybe_remove_admin_language_switcher' );
+add_action( 'wpml_before_init', 'wpml_link_manager_maybe_remove_admin_ls' );
