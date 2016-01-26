@@ -2,8 +2,14 @@
 
 class Test_WPML_Link_Manager extends WPML_UnitTestCase {
 
-    private $lm;
-    private $lm_helper;
+	/**
+	 * @var WPML_Link_Manager
+	 */
+	private $lm;
+	/**
+	 * @var WPML_Link_Manager_Helper
+	 */
+	private $lm_helper;
 
     public function test_add_or_edit_link_action() {
         $this->instantiate_link_manager( 'link.php' );
@@ -30,13 +36,17 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
     }
 
     public function test_get_bookmarks_filter() {
-        global $sitepress;
-        $this->instantiate_link_manager( 'link.php' );
-
+        global $sitepress, $wpdb, $WPML_String_Translation;
         $orig_lang    = 'en';
         $sec_lang     = 'fr';
         $name_base    = 'The link ';
         $desc_base    = 'The link description ';
+
+        $wpml_installation = new WPML_Installation( $wpdb, $sitepress );
+        $wpml_installation->set_active_languages( array( $orig_lang, $sec_lang) );
+        $WPML_String_Translation->init_active_languages();
+
+        $this->instantiate_link_manager( 'link.php' );
 
         $sitepress->switch_lang( $orig_lang );
 
@@ -95,23 +105,26 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
     }
 
     public function test_plugin_activation_action() {
-        $this->instantiate_link_manager();
-        $this->lm->plugin_activation_action();
+        wpml_link_manager_activation();
 
         $option = get_option( 'wpml-package-translation-refresh-required' );
 
         $this->assertTrue( $option );
     }
 
-    public function test_get_terms_filter() {
-        global $sitepress;
-        $this->instantiate_link_manager( 'edit-tags.php' );
-
+	public function test_get_terms_filter() {
+        global $sitepress, $wpdb, $WPML_String_Translation;
         $orig_lang    = 'en';
         $sec_lang     = 'fr';
         $name_base    = 'The cat ';
         $desc_base    = 'The cat description ';
         $taxonomy     = 'link_category';
+
+        $wpml_installation = new WPML_Installation( $wpdb, $sitepress );
+        $wpml_installation->set_active_languages( array( $orig_lang, $sec_lang) );
+        $WPML_String_Translation->init_active_languages();
+
+        $this->instantiate_link_manager( 'edit-tags.php' );
 
         $sitepress->switch_lang( $orig_lang );
 
@@ -133,7 +146,8 @@ class Test_WPML_Link_Manager extends WPML_UnitTestCase {
         $sitepress->switch_lang( $sec_lang );
         $this->instantiate_link_manager( 'front' );
 
-        global $WPML_String_Translation;
+		/** @var WPML_String_Translation $WPML_String_Translation */
+		global $WPML_String_Translation;
         $WPML_String_Translation->clear_string_filter( 'fr' );
 
         $translated_cats = $this->lm->get_terms_filter( $cats, array( $taxonomy ) );

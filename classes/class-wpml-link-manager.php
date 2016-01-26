@@ -6,7 +6,7 @@ Class WPML_Link_Manager {
 	private $helper;
 
 	/**
-	 * @param object $pagenow
+	 * @param string $pagenow
 	 * @param object $helper
 	 */
 	public function __construct( &$pagenow, &$helper ) {
@@ -151,7 +151,7 @@ Class WPML_Link_Manager {
 	 * @param array $categories
 	 * @param array $taxonomies
 	 *
-	 * @return string $cat_name Category name
+	 * @return array $cat_name Category name
 	 */
 	public function get_terms_filter( $categories, $taxonomies ) {
 
