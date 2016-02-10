@@ -2,6 +2,7 @@
 /* Plugin Name: WPML Link Manager
  * Description: Makes Link Manager (in the core before WP 3.5) compatible with WPML > 3.2
  * Author: OnTheGoSystems
+ * Author URL: http://wpml.org/
  * Version: 0.1-dev
  */
 
